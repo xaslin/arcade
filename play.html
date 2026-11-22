@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Arcade</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="play">
+<header class="bar">
+  <a class="logo" href="index.html">arcade</a>
+  <span id="name" class="gname"></span>
+  <div class="spacer"></div>
+  <button id="reload" class="btn">Reload</button>
+  <button id="full" class="btn primary">Fullscreen</button>
+</header>
+<div class="stage">
+  <iframe id="frame" allow="fullscreen; autoplay; gamepad; clipboard-write" allowfullscreen></iframe>
+</div>
+
+<script>
+const id = new URLSearchParams(location.search).get('g');
+const frame = document.getElementById('frame');
+fetch('games.json').then(r => r.json()).then(games => {
+  const g = games.find(x => x.id === id);
+  if (!g) { document.getElementById('name').textContent = 'Game not found'; return; }
+  document.title = g.title + ' - Arcade';
+  document.getElementById('name').textContent = g.title;
+  // "url" lets you point at an external page; otherwise use the local folder.
+  frame.src = g.url || ('games/' + g.id + '/index.html');
+  frame.addEventListener('load', () => { try { frame.contentWindow.focus(); } catch (e) {} });
+});
+document.getElementById('full').onclick = () => (frame.requestFullscreen || frame.webkitRequestFullscreen).call(frame);
+document.getElementById('reload').onclick = () => { frame.src = frame.src; };
+</script>
+</body>
+</html>

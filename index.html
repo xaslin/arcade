@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Arcade</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="bar">
+  <div class="logo">arcade</div>
+  <input id="q" class="search" type="search" placeholder="Search games..." autocomplete="off">
+</header>
+
+<main>
+  <section class="hero">
+    <h1>Play anything.</h1>
+    <p>Browser games, no installs. <span id="count"></span></p>
+  </section>
+  <div id="grid" class="grid"></div>
+  <p id="empty" class="empty" hidden>No games found.</p>
+</main>
+
+<script>
+fetch('games.json').then(r => r.json()).then(games => {
+  const grid = document.getElementById('grid');
+  const q = document.getElementById('q');
+  const empty = document.getElementById('empty');
+  document.getElementById('count').textContent = games.length + ' games';
+
+  function render() {
+    const term = q.value.trim().toLowerCase();
+    const list = games.filter(g => (g.title + ' ' + (g.tags || []).join(' ')).toLowerCase().includes(term));
+    grid.innerHTML = '';
+    list.forEach(g => {
+      const a = document.createElement('a');
+      a.className = 'card';
+      a.href = 'play.html?g=' + encodeURIComponent(g.id);
+      const thumb = document.createElement('div');
+      thumb.className = 'thumb';
+      if (g.thumb) {
+        const img = document.createElement('img');
+        img.src = g.thumb; img.alt = ''; img.loading = 'lazy';
+        thumb.appendChild(img);
+      } else {
+        thumb.textContent = g.title.charAt(0).toUpperCase();
+      }
+      const t = document.createElement('div');
+      t.className = 'title';
+      t.textContent = g.title;
+      a.append(thumb, t);
+      grid.appendChild(a);
+    });
+    empty.hidden = list.length > 0;
+  }
+  q.addEventListener('input', render);
+  render();
+});
+</script>
+</body>
+</html>
