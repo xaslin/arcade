@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Minesweeper</title>
+<style>
+html,body{margin:0;height:100%;background:#12151c;color:#e8eaf0;font-family:system-ui,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;user-select:none}
+#top{display:flex;gap:14px;align-items:center;margin-bottom:12px;font-weight:700}
+#top button{background:#222836;color:#e8eaf0;border:1px solid #333b50;border-radius:8px;padding:6px 12px;font:600 13px system-ui;cursor:pointer}
+#top button.on{border-color:#6c8cff;color:#9db2ff}
+#board{display:grid;gap:2px;background:#0a0c11;padding:2px;border-radius:6px}
+.c{width:var(--s);height:var(--s);display:grid;place-items:center;background:#2a3142;border-radius:3px;font:800 calc(var(--s)*.55) system-ui;cursor:pointer}
+.c:hover{background:#343c52}
+.c.o{background:#161a24;cursor:default}
+.c.m{background:#7a2230}
+.n1{color:#6cb6ff}.n2{color:#5fd68a}.n3{color:#ff7b72}.n4{color:#b392f0}.n5{color:#ffa657}.n6{color:#39c5cf}.n7{color:#ddd}.n8{color:#999}
+small{color:#778;margin-top:10px}
+</style></head><body>
+<div id="top">
+  <span id="mines">Mines: 0</span><span id="time">0s</span>
+  <button id="reset">New game</button>
+  <button data-d="0" class="on">Easy</button><button data-d="1">Medium</button><button data-d="2">Hard</button>
+  <button id="flagmode">Flag mode: off</button>
+</div>
+<div id="board"></div>
+<small>Click to reveal &middot; Right-click (or Flag mode) to flag &middot; First click is always safe</small>
+<script>
+const LEVELS=[[9,9,10],[16,16,40],[24,16,70]]; // cols, rows, mines
+let W,H,M,cells,over,started,flags,timer,secs,flagMode=false,lvl=0;
+const boardEl=document.getElementById('board');
+function start(){
+  [W,H,M]=LEVELS[lvl];
+  cells=[];for(let i=0;i<W*H;i++)cells.push({m:false,o:false,f:false,n:0});
+  over=false;started=false;flags=0;secs=0;clearInterval(timer);
+  document.getElementById('time').textContent='0s';
+  const s=Math.max(22,Math.min(40,Math.floor(Math.min(innerWidth-40,(innerHeight-130))/Math.max(W,H))));
+  boardEl.style.setProperty('--s',s+'px');
+  boardEl.style.gridTemplateColumns='repeat('+W+',var(--s))';
+  boardEl.innerHTML='';
+  cells.forEach((c,i)=>{
+    const d=document.createElement('div');d.className='c';
+    d.onclick=()=>click(i);
+    d.oncontextmenu=e=>{e.preventDefault();flag(i)};
+    c.el=d;boardEl.appendChild(d);
+  });
+  info();
+}
+function info(){document.getElementById('mines').textContent='Mines: '+(M-flags)}
+function neighbors(i){
+  const x=i%W,y=(i/W)|0,r=[];
+  for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
+    if(!dx&&!dy)continue;const nx=x+dx,ny=y+dy;
+    if(nx>=0&&ny>=0&&nx<W&&ny<H)r.push(ny*W+nx);
+  }return r;
+}
+function place(safe){
+  const ban=new Set([safe,...neighbors(safe)]);let n=0;
+  while(n<M){const i=Math.random()*W*H|0;if(!cells[i].m&&!ban.has(i)){cells[i].m=true;n++}}
+  cells.forEach((c,i)=>c.n=neighbors(i).filter(j=>cells[j].m).length);
+}
+function click(i){
+  if(over)return;
+  if(flagMode){flag(i);return}
+  const c=cells[i];if(c.f||c.o)return;
+  if(!started){started=true;place(i);timer=setInterval(()=>{secs++;document.getElementById('time').textContent=secs+'s'},1000)}
+  if(c.m){lose(i);return}
+  reveal(i);check();
+}
+function reveal(i){
+  const stack=[i];
+  while(stack.length){
+    const j=stack.pop(),c=cells[j];if(c.o||c.f)continue;
+    c.o=true;c.el.classList.add('o');
+    if(c.n){c.el.textContent=c.n;c.el.classList.add('n'+c.n)}
+    else neighbors(j).forEach(k=>{if(!cells[k].o)stack.push(k)});
+  }
+}
+function flag(i){
+  if(over)return;const c=cells[i];if(c.o)return;
+  c.f=!c.f;flags+=c.f?1:-1;c.el.textContent=c.f?'⚑':'';info();
+}
+function lose(hit){
+  over=true;clearInterval(timer);
+  cells.forEach(c=>{if(c.m){c.el.classList.add('m');c.el.textContent='✹'}});
+  cells[hit].el.style.outline='2px solid #fff';
+  document.getElementById('mines').textContent='Boom! Game over';
+}
+function check(){
+  if(cells.every(c=>c.m||c.o)){
+    over=true;clearInterval(timer);
+    cells.forEach(c=>{if(c.m&&!c.f){c.f=true;c.el.textContent='⚑'}});
+    document.getElementById('mines').textContent='You win! '+secs+'s';
+  }
+}
+document.getElementById('reset').onclick=start;
+document.getElementById('flagmode').onclick=e=>{flagMode=!flagMode;e.target.textContent='Flag mode: '+(flagMode?'on':'off');e.target.classList.toggle('on',flagMode)};
+document.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{
+  lvl=+b.dataset.d;document.querySelectorAll('[data-d]').forEach(x=>x.classList.toggle('on',x===b));start();
+});
+addEventListener('resize',()=>{if(!started)start()});
+start();
+</script></body></html>

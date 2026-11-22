@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Blocks</title>
+<style>
+html,body{margin:0;height:100%;background:#0d1017;color:#e8eaf0;font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;gap:24px}
+canvas{background:#11151e;border:2px solid #263042;height:min(88vh,640px);width:auto;aspect-ratio:1/2}
+#side{width:150px}
+#side div{margin-bottom:14px}
+#side b{display:block;font-size:12px;color:#8b90a3;font-weight:600;text-transform:uppercase;letter-spacing:.6px}
+#side span{font-size:24px;font-weight:800}
+#next{width:100px;height:100px;aspect-ratio:1;border:2px solid #263042}
+small{color:#778;display:block;line-height:1.6}
+</style></head><body>
+<canvas id="c" width="300" height="600"></canvas>
+<div id="side">
+  <div><b>Score</b><span id="score">0</span></div>
+  <div><b>Lines</b><span id="lines">0</span></div>
+  <div><b>Level</b><span id="level">1</span></div>
+  <div><b>Next</b><canvas id="next" width="100" height="100" style="height:100px"></canvas></div>
+  <small>&larr; &rarr; move<br>&uarr; / X rotate<br>&darr; soft drop<br>Space hard drop<br>P pause &middot; R restart</small>
+</div>
+<script>
+const COLS=10,ROWS=20,S=30;
+const c=document.getElementById('c'),x=c.getContext('2d');
+const nc=document.getElementById('next'),nx=nc.getContext('2d');
+const SHAPES={
+  I:[[0,0,0,0],[1,1,1,1],[0,0,0,0],[0,0,0,0]],
+  O:[[1,1],[1,1]],
+  T:[[0,1,0],[1,1,1],[0,0,0]],
+  S:[[0,1,1],[1,1,0],[0,0,0]],
+  Z:[[1,1,0],[0,1,1],[0,0,0]],
+  J:[[1,0,0],[1,1,1],[0,0,0]],
+  L:[[0,0,1],[1,1,1],[0,0,0]]
+};
+const COLORS={I:'#4dd0e1',O:'#ffd54f',T:'#ba68c8',S:'#81c784',Z:'#e57373',J:'#64b5f6',L:'#ffb74d'};
+let grid,cur,nextP,score,lines,level,over,paused,bag=[],dropAcc,last;
+function rnd(){if(!bag.length){bag=Object.keys(SHAPES);for(let i=bag.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[bag[i],bag[j]]=[bag[j],bag[i]]}}return bag.pop()}
+function piece(t){return{t,m:SHAPES[t].map(r=>r.slice()),x:((COLS-SHAPES[t][0].length)/2)|0,y:0}}
+function rot(m){const n=m.length;return m.map((_,i)=>m.map((_,j)=>m[n-1-j][i]))}
+function hit(p,m=p.m,px=p.x,py=p.y){
+  for(let j=0;j<m.length;j++)for(let i=0;i<m[j].length;i++)if(m[j][i]){
+    const gx=px+i,gy=py+j;
+    if(gx<0||gx>=COLS||gy>=ROWS)return true;
+    if(gy>=0&&grid[gy][gx])return true;
+  }return false;
+}
+function reset(){
+  grid=Array.from({length:ROWS},()=>Array(COLS).fill(null));
+  score=0;lines=0;level=1;over=false;paused=false;bag=[];dropAcc=0;last=performance.now();
+  nextP=piece(rnd());spawn();ui();
+}
+function spawn(){cur=nextP;nextP=piece(rnd());if(hit(cur))over=true}
+function ui(){
+  document.getElementById('score').textContent=score;
+  document.getElementById('lines').textContent=lines;
+  document.getElementById('level').textContent=level;
+}
+function lock(){
+  cur.m.forEach((r,j)=>r.forEach((v,i)=>{if(v&&cur.y+j>=0)grid[cur.y+j][cur.x+i]=cur.t}));
+  let n=0;
+  for(let y=ROWS-1;y>=0;y--)if(grid[y].every(v=>v)){grid.splice(y,1);grid.unshift(Array(COLS).fill(null));n++;y++}
+  if(n){score+=[0,100,300,500,800][n]*level;lines+=n;level=1+(lines/10|0)}
+  ui();spawn();
+}
+function move(dx){if(!hit(cur,cur.m,cur.x+dx,cur.y))cur.x+=dx}
+function drop(){if(!hit(cur,cur.m,cur.x,cur.y+1)){cur.y++;return true}lock();return false}
+function rotate(){
+  const m=rot(cur.m);
+  for(const k of [0,-1,1,-2,2])if(!hit(cur,m,cur.x+k,cur.y)){cur.m=m;cur.x+=k;return}
+}
+function hard(){let d=0;while(!hit(cur,cur.m,cur.x,cur.y+1)){cur.y++;d++}score+=d*2;lock()}
+function cell(g,px,py,col,s=S){g.fillStyle=col;g.fillRect(px+1,py+1,s-2,s-2);g.fillStyle='rgba(255,255,255,.18)';g.fillRect(px+1,py+1,s-2,4)}
+function draw(){
+  x.fillStyle='#11151e';x.fillRect(0,0,c.width,c.height);
+  x.strokeStyle='#181d29';
+  for(let i=1;i<COLS;i++){x.beginPath();x.moveTo(i*S,0);x.lineTo(i*S,c.height);x.stroke()}
+  for(let j=1;j<ROWS;j++){x.beginPath();x.moveTo(0,j*S);x.lineTo(c.width,j*S);x.stroke()}
+  grid.forEach((r,j)=>r.forEach((v,i)=>{if(v)cell(x,i*S,j*S,COLORS[v])}));
+  if(!over){
+    let gy=cur.y;while(!hit(cur,cur.m,cur.x,gy+1))gy++;
+    cur.m.forEach((r,j)=>r.forEach((v,i)=>{if(v){x.fillStyle='rgba(255,255,255,.1)';x.fillRect((cur.x+i)*S+1,(gy+j)*S+1,S-2,S-2)}}));
+    cur.m.forEach((r,j)=>r.forEach((v,i)=>{if(v)cell(x,(cur.x+i)*S,(cur.y+j)*S,COLORS[cur.t])}));
+  }
+  nx.fillStyle='#11151e';nx.fillRect(0,0,100,100);
+  const m=nextP.m,sz=22,ox=(100-m[0].length*sz)/2,oy=(100-m.length*sz)/2;
+  m.forEach((r,j)=>r.forEach((v,i)=>{if(v)cell(nx,ox+i*sz,oy+j*sz,COLORS[nextP.t],sz)}));
+  if(over||paused){
+    x.fillStyle='rgba(0,0,0,.65)';x.fillRect(0,0,c.width,c.height);
+    x.fillStyle='#fff';x.textAlign='center';x.font='800 28px system-ui';
+    x.fillText(over?'Game over':'Paused',c.width/2,c.height/2-6);
+    x.font='600 14px system-ui';x.fillStyle='#aab';
+    x.fillText(over?'Press R to play again':'Press P to resume',c.width/2,c.height/2+20);
+  }
+}
+function frame(t){
+  const dt=Math.min(100,t-last);last=t;
+  if(!over&&!paused){
+    dropAcc+=dt;const iv=Math.max(80,800-(level-1)*70);
+    while(dropAcc>=iv&&!over){dropAcc-=iv;drop()}
+  }
+  draw();requestAnimationFrame(frame);
+}
+addEventListener('keydown',e=>{
+  const k=e.key.toLowerCase();
+  if(k==='r'){reset();return}
+  if(k==='p'){if(!over)paused=!paused;return}
+  if(over||paused)return;
+  if(k==='arrowleft'||k==='a')move(-1);
+  else if(k==='arrowright'||k==='d')move(1);
+  else if(k==='arrowdown'||k==='s'){if(drop())score++;ui();dropAcc=0}
+  else if(k==='arrowup'||k==='x'||k==='w')rotate();
+  else if(k===' ')hard();
+  else return;
+  e.preventDefault();
+});
+reset();requestAnimationFrame(frame);
+</script></body></html>

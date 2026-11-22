@@ -15,5 +15,38 @@
       "ncase"
     ],
     "thumb": "games/door/thumb.png"
+  },
+  {
+    "id": "2048",
+    "title": "2048",
+    "tags": [
+      "puzzle",
+      "numbers"
+    ]
+  },
+  {
+    "id": "hextris",
+    "title": "Hextris",
+    "tags": [
+      "puzzle",
+      "arcade"
+    ]
+  },
+  {
+    "id": "minesweeper",
+    "title": "Minesweeper",
+    "tags": [
+      "puzzle",
+      "classic"
+    ]
+  },
+  {
+    "id": "blocks",
+    "title": "Blocks",
+    "tags": [
+      "puzzle",
+      "tetris",
+      "classic"
+    ]
   }
 ]
