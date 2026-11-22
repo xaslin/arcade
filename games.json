@@ -1,3 +1,19 @@
 [
-  { "id": "snake", "title": "Snake", "tags": ["classic", "arcade"] }
+  {
+    "id": "snake",
+    "title": "Snake",
+    "tags": [
+      "classic",
+      "arcade"
+    ]
+  },
+  {
+    "id": "door",
+    "title": "Door",
+    "tags": [
+      "puzzle",
+      "ncase"
+    ],
+    "thumb": "games/door/thumb.png"
+  }
 ]
